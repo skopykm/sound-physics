@@ -328,6 +328,49 @@ html.reduce-motion *{transition-duration:0ms !important}
 #tour .tour-close{margin-left:auto;width:32px;height:32px;border-radius:8px;color:var(--ink-3)}
 #tour .tour-close:hover{color:var(--ink);background:var(--bg-3)}
 </style>
+
+<style>
+#vol-mobile{display:none}
+/* ---------- mobile polish ---------- */
+@media (max-width:860px){
+  header{gap:8px;padding:0 10px}
+  header .brand{font-size:17px}
+  .tour-toggle{padding:0 9px}
+  .tour-toggle .label{display:none}
+  header .vol{display:none}                       /* volume lives in the audio popover on phones */
+  header .audio-ctl{padding:3px}
+  #vol-mobile{position:fixed;right:10px;top:60px;z-index:40;background:var(--bg-2);border-radius:12px;padding:10px 12px;box-shadow:var(--raise);display:none;align-items:center;gap:8px;font-size:12px;color:var(--ink-3)}
+  #vol-mobile.open{display:flex}
+  #vol-mobile input[type=range]{width:150px;height:36px}
+  .view{padding:14px 12px 60px}
+  .lab-view h1{font-size:28px}
+  .lab-view .lead{font-size:15px}
+  .lab-view .lab{display:flex;flex-direction:column;gap:10px;height:auto !important}
+  .lab-view .lab-side{max-height:none;overflow:visible;padding-bottom:0}
+  .scroll-hint{display:none !important}
+  .lab-view .stage canvas.fill,.stage canvas.field{height:min(58vh,440px)}
+  #gl3{height:100%}
+  .graph canvas{height:110px}
+  .lab-side .modes .btn{min-height:44px;font-size:14px}
+  .lab-side input[type=range]{height:44px}
+  .lab-side .ro b{font-size:26px}
+  .readouts{gap:6px}
+  #tour{width:calc(100vw - 20px);left:10px !important;bottom:12px;top:auto !important}
+}
+@media (max-width:480px){
+  header .brand{font-size:15px}
+  header .brand span{display:none}
+  .hero h1{font-size:40px}
+  .cards{grid-template-columns:1fr 1fr;gap:10px}
+  .card canvas{height:70px}
+  .card .ct{font-size:17px}
+  .card .cd{font-size:12px}
+  .lab-view h1{font-size:24px}
+  .readouts{grid-template-columns:repeat(3,1fr)}
+  .lab-side .ro b{font-size:20px}
+  .lab-side .ro span{font-size:10px}
+}
+</style>
 <body>
 <div id="grain" aria-hidden="true"></div>
 <div id="app">
@@ -336,7 +379,7 @@ html.reduce-motion *{transition-duration:0ms !important}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
   </button>
   <div class="brand">Physics &amp; Propagation of Sound <span>Drama 291 · Sound 1</span></div>
-  <button id="tour-btn" class="tour-toggle" aria-pressed="false" title="Step-by-step walkthrough of each page"><span class="dot"></span>Walkthrough</button>
+  <button id="tour-btn" class="tour-toggle" aria-pressed="false" title="Step-by-step walkthrough of each page"><span class="dot"></span><span class="label">Walkthrough</span></button>
   <div class="audio-ctl" role="group" aria-label="Audio">
     <button id="audio-btn" class="icon-btn" aria-pressed="false" aria-label="Audio on/off" title="Audio on/off">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
@@ -345,6 +388,7 @@ html.reduce-motion *{transition-duration:0ms !important}
   </div>
 </header>
 <div id="scrim"></div>
+<div id="vol-mobile"><span>Volume</span><input type="range" id="vol2" min="0" max="100" value="60" step="1" aria-label="Volume"></div>
 <nav id="nav" aria-label="Sections">
   <a href="#home" data-view="home"><span class="n">⌂</span>Overview</a>
   <div class="sep"></div>
@@ -1312,7 +1356,7 @@ const Sim=(function(){
     x.font=f;x.fillStyle=C.coral;x.textAlign='left';x.fillText('pressure · + compression',10,mid-amp+4);
     x.fillStyle=C.violet;x.fillText('− rarefaction',10,mid+amp+2);
     x.fillStyle=C.ink3;x.textAlign='right';
-    for(let r=0;r<=FIELD_R+.01;r+=.5){const px=X(r);if(px<20||px>gw-10)continue;x.fillRect(px,gh-10,1,4);x.textAlign='center';x.fillText(r.toFixed(1)+' m · '+(r*3.28084).toFixed(1)+' ft',px,gh-14)}
+    {const stepR=gw<560?1:.5;for(let r=0;r<=FIELD_R+.01;r+=stepR){const px=X(r);if(px<20||px>gw-10)continue;x.fillRect(px,gh-10,1,4);x.textAlign='center';x.fillText(gw<560?(r+' m · '+Math.round(r*3.28084)+' ft'):(r.toFixed(1)+' m · '+(r*3.28084).toFixed(1)+' ft'),px,gh-14)}}
     // cursor
     const cxp=X(S.cursorR),pc=pressureAt(S.cursorR);
     x.strokeStyle=C.green;x.lineWidth=PRESENTER?2:1.5;x.beginPath();x.moveTo(cxp,8);x.lineTo(cxp,gh-6);x.stroke();
@@ -1502,9 +1546,12 @@ const Audio=(function(){
   }
   $('#am-ok').onclick=()=>{unlock();$('#audio-modal').classList.remove('open');if(ready){setOn(true);if(pending){const cb=pending;pending=null;cb()}}};
   $('#am-no').onclick=()=>{pending=null;$('#audio-modal').classList.remove('open')};
-  $('#audio-btn').onclick=()=>{if(!ready){ensure(()=>{});return}setOn(!on)};
+  $('#audio-btn').onclick=()=>{if(!ready){ensure(()=>{});return}setOn(!on);if(window.innerWidth<=860){$('#vol-mobile').classList.toggle('open',on)}};
+  // phone volume popover mirrors the header slider
+  $('#vol2').oninput=e=>{$('#vol').value=e.target.value;$('#vol').dispatchEvent(new Event('input'))};
+  document.addEventListener('pointerdown',e=>{const vm=$('#vol-mobile');if(vm.classList.contains('open')&&!vm.contains(e.target)&&!$('#audio-btn').contains(e.target))vm.classList.remove('open')});
   $('#vol').oninput=e=>{store.set({vol:+e.target.value});if(master)master.gain.setTargetAtTime(volGain(+e.target.value),ctx.currentTime,.02)};
-  if(saved.vol!=null)$('#vol').value=saved.vol;
+  if(saved.vol!=null){$('#vol').value=saved.vol;$('#vol2').value=saved.vol}
   function make(name,dest){ // a fresh instance owned by the caller (sections that need private gain control)
     if(!ready)return null;const spec=SOURCES[name];if(!spec)return null;let h=null;
     if(spec.type==='synth')h=spec.make(ctx);else if(spec.type==='pcm16')h=pcmOneShot(ctx,spec);
@@ -2550,7 +2597,7 @@ const Tour=(function(){
     target=el;el.classList.add('tour-hl');if(el.scrollIntoView)el.scrollIntoView({block:'nearest',inline:'nearest'});
     cnt.textContent='STEP '+(i+1)+' OF '+steps.length;txt.textContent=text;$('#tour-prev').disabled=i===0;$('#tour-next').textContent=i===steps.length-1?'Done':'Next';
     box.hidden=false;place()}
-  function place(){if(!target||box.hidden)return;const r=target.getBoundingClientRect(),bw=box.offsetWidth,bh=box.offsetHeight,vw=innerWidth,vh=innerHeight,gap=14;
+  function place(){if(!target||box.hidden)return;if(innerWidth<=860){box.style.left='10px';box.style.top='';return}const r=target.getBoundingClientRect(),bw=box.offsetWidth,bh=box.offsetHeight,vw=innerWidth,vh=innerHeight,gap=14;
     let x,y;if(r.right+gap+bw<=vw&&r.height<vh*.9){x=r.right+gap;y=r.top}else if(r.bottom+gap+bh<=vh){x=r.left;y=r.bottom+gap}else if(r.top-gap-bh>=0){x=r.left;y=r.top-gap-bh}else{x=r.left;y=Math.max(8,vh-bh-8)}
     x=clamp(x,8,vw-bw-8);y=clamp(y,8,vh-bh-8);box.style.left=x+'px';box.style.top=y+'px'}
   function next(){if(i>=steps.length-1){stop();return}i++;show()}
