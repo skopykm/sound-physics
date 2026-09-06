@@ -371,6 +371,18 @@ html.reduce-motion *{transition-duration:0ms !important}
   .lab-side .ro span{font-size:10px}
 }
 </style>
+
+<style>
+@media (max-width:860px){
+  /* phone: let the whole document scroll normally instead of an inner scrolling pane */
+  html,body{height:auto;overflow:auto}
+  #app{display:block;height:auto;min-height:100vh}
+  header{position:sticky;top:0;z-index:20;height:56px}
+  main{overflow:visible;height:auto}
+  .view{max-width:none}
+  .lab-view.active{height:auto}
+}
+</style>
 <body>
 <div id="grain" aria-hidden="true"></div>
 <div id="app">
@@ -1732,9 +1744,9 @@ const Spec={
     x.font=this.font(PRESENTER?13:11);x.fillStyle='rgba(242,239,233,.45)';for(const [a,b,l] of subs){const xa=this.fx(a,L,W),xb=this.fx(b,L,W);if(xb-xa>34)x.fillText(l,(xa+xb)/2,top+(PRESENTER?44:34));x.fillStyle='rgba(242,239,233,.12)';x.fillRect(xa,top,1,10);x.fillStyle='rgba(242,239,233,.45)'}
     // ticks
     x.fillStyle=C.ink3;x.font=this.font(PRESENTER?15:12);
-    for(const f of [20,50,100,200,500,1000,2000,5000,10000,20000]){const X=this.fx(f,L,W);x.fillRect(X,bot,1,5);x.fillText(f>=1000?(f/1000)+'k':f,X,bot+18)}
+    for(const f of ((R-L)<520?[20,50,100,200,500,1000,2000,5000,10000,20000].filter((f,i)=>i%2===0||f===20000):[20,50,100,200,500,1000,2000,5000,10000,20000])){const X=this.fx(f,L,W);x.fillRect(X,bot,1,5);x.fillText(f>=1000?(f/1000)+'k':f,X,bot+18)}
     x.fillText('Hz',R+16,bot+18);
-    if(opts.hearing){x.fillStyle=C.ink2;x.font=this.font(PRESENTER?15:12);x.textAlign='left';x.fillText('◀ human hearing starts ~20 Hz',L+4,bot-8);x.textAlign='right';x.fillText('ends ~20 kHz ▶',R-4,bot-8)}
+    if(opts.hearing){const nr=(R-L)<520;x.fillStyle=C.ink2;x.font=this.font(nr?10:(PRESENTER?15:12));x.textAlign='left';x.fillText(nr?'◀ hearing ~20 Hz':'◀ human hearing starts ~20 Hz',L+4,bot-8);x.textAlign='right';x.fillText(nr?'~20 kHz ▶':'ends ~20 kHz ▶',R-4,bot-8)}
   },
   // analyser trace: filled, log-spaced
   trace(x,L,R,top,bot,fill,stroke){
@@ -1887,12 +1899,12 @@ const Dist7=(function(){
     if(sndOn('s7')&&S.src==='thunder'){chain();const th=own.thunder;if(th){clearTimeout(strikeT);strikeT=setTimeout(()=>th.trigger(),S.d/343*1000)}}}
   function draw(now){
     x=fit(cv);const w=cv._w,h=cv._h;x.clearRect(0,0,w,h);
-    const sceneH=Math.min(h*.55,300),gy=sceneH*.78,L=60,R=w-60,W=R-L;
+    const NARROW=w<600;const sceneH=Math.min(h*.55,300),gy=sceneH*.78,L=NARROW?36:60,R=w-(NARROW?36:60),W=R-L;
     const font=s=>'600 '+s+'px '+getComputedStyle(html).getPropertyValue('--title');
     // ground line + ruler (m and ft)
     x.strokeStyle='rgba(242,239,233,.15)';x.lineWidth=1;x.beginPath();x.moveTo(L,gy);x.lineTo(R,gy);x.stroke();
     x.fillStyle=C.ink3;x.font=font(PRESENTER?15:12);x.textAlign='center';
-    const nT=4;for(let k=0;k<=nT;k++){const X=L+W*k/nT,dm=S.d*k/nT;x.fillRect(X,gy,1,6);x.fillText(fmtD(dm),X,gy+20)}
+    const nT=NARROW?2:4;for(let k=0;k<=nT;k++){const X=L+W*k/nT,dm=S.d*k/nT;x.fillRect(X,gy,1,6);x.textAlign=k===0?'left':k===nT?'right':'center';x.fillText(fmtD(dm),X,gy+20)}x.textAlign='center';
     // wall
     if(S.scene==='wall'){const wx=L+W*.62;const g=x.createLinearGradient(wx-8,0,wx+8,0);g.addColorStop(0,'#1A2130');g.addColorStop(.5,'#2C3649');g.addColorStop(1,'#1A2130');
       x.fillStyle=g;x.fillRect(wx-8,gy-sceneH*.55,16,sceneH*.55);x.fillStyle=C.ink2;x.font=font(PRESENTER?15:12);x.fillText('WALL',wx,gy-sceneH*.55-8);
@@ -1926,19 +1938,19 @@ const Dist7=(function(){
     // arriving spectrum panel
     const pt=sceneH+18,pb=h-26,pl=L,pr=R;
     x.fillStyle='rgba(7,9,14,.5)';x.fillRect(pl-10,pt-14,pr-pl+20,pb-pt+36);
-    x.fillStyle=C.ink3;x.font=font(PRESENTER?14:11);x.textAlign='left';x.fillText('WHAT ARRIVES · level by frequency',pl,pt-2);
-    for(const f of [20,50,100,200,500,1000,2000,5000,10000,20000]){const X=Spec.fx(f,pl,pr-pl);x.fillRect(X,pb,1,4);x.textAlign='center';x.fillText(f>=1000?(f/1000)+'k':f,X,pb+14)}
+    x.fillStyle=C.ink3;x.font=font(PRESENTER?14:11);x.textAlign='left';x.fillText(NARROW?'WHAT ARRIVES':'WHAT ARRIVES · level by frequency',pl,pt-2);
+    for(const f of (NARROW?[20,100,1000,10000,20000]:[20,50,100,200,500,1000,2000,5000,10000,20000])){const X=Spec.fx(f,pl,pr-pl);x.fillRect(X,pb,1,4);x.textAlign='center';x.fillText(f>=1000?(f/1000)+'k':f,X,pb+14)}
     const Y=db=>pt+8+clamp(db/80,0,1)*(pb-pt-8);
     // reference: at 1 m, flat
     x.strokeStyle='rgba(242,239,233,.15)';x.setLineDash([3,5]);x.beginPath();x.moveTo(pl,Y(0));x.lineTo(pr,Y(0));x.stroke();x.setLineDash([]);
-    x.fillStyle=C.ink3;x.textAlign='right';x.fillText('at 1 m: full level',pr-4,Y(0)-3);
+    if(!NARROW){x.fillStyle=C.ink3;x.textAlign='right';x.fillText('at 1 m: full level',pr-4,Y(0)-3)}
     if(S.scene==='air'&&S.src==='music'&&(S.ground||S.beam)){x.strokeStyle='rgba(79,216,235,.45)';x.lineWidth=1.5;x.setLineDash([3,5]);x.beginPath();
       for(let i=0;i<=120;i++){const f=20*Math.pow(1000,i/120);const X=Spec.fx(f,pl,pr-pl),y=Y(airOnly(f,S.d));i?x.lineTo(X,y):x.moveTo(X,y)}x.stroke();x.setLineDash([]);
       x.fillStyle='rgba(79,216,235,.7)';x.textAlign='left';x.font=font(PRESENTER?14:11);x.fillText('dotted = air alone',pl+4,pt+34)}
     Spec.trace(x,pl,pr,pt+8,pb,'rgba(255,210,74,.12)','rgba(255,210,74,.5)');
     x.strokeStyle=C.cyan;x.lineWidth=PRESENTER?3:2.2;x.shadowColor=C.cyan;x.shadowBlur=6;x.beginPath();
     for(let i=0;i<=120;i++){const f=20*Math.pow(1000,i/120);const X=Spec.fx(f,pl,pr-pl),y=Y(lossAt(f,S.d));i?x.lineTo(X,y):x.moveTo(X,y)}x.stroke();x.shadowBlur=0;
-    x.fillStyle=C.cyan;x.textAlign='right';x.font=font(PRESENTER?15:12);x.fillText('quieter ↓ and highs gone first ↘',pr-4,pt+34);
+    if(!NARROW){x.fillStyle=C.cyan;x.textAlign='right';x.font=font(PRESENTER?15:12);x.fillText('quieter ↓ and highs gone first ↘',pr-4,pt+34)}
   }
   function ro(){const d=S.d,hf=hfCut(d);
     strikeVis();$('#d-val').textContent=fmtD(d);$('#d-lo').textContent=S.src==='thunder'?'100 m':'2 m';$('#d-hi').textContent=S.src==='thunder'?'10 km':(S.scene==='wall'?'12 m · 40 ft':'61 m · 200 ft');
@@ -2178,18 +2190,19 @@ const Echo9=(function(){
     const name=S.src==='drum'?'impulse':S.src;if(!own.room||own.roomName!==name){own.room=Audio.make(name,conv);own.room.out.connect(Audio.master);own.roomName=name}own.room.trigger(1)}}
   // ---------- draw ----------
   function draw(now){
-    x=fit(cv);const w=cv._w,h=cv._h;x.clearRect(0,0,w,h);
-    const sceneH=h*.5,gy=sceneH*.8,L=70,R=w-40;const span=[5,10,20,50,100,150].find(s=>s>=S.d)||150;const W=R-30-L;const wallX=L+W*S.d/span;const WX=d=>L+W*d/span;
+    x=fit(cv);const w=cv._w,h=cv._h;x.clearRect(0,0,w,h);const NARROW=w<600;
+    const sceneH=h*.5,gy=sceneH*.8,L=NARROW?46:70,R=w-(NARROW?24:40);const span=[5,10,20,50,100,150].find(s=>s>=S.d)||150;const W=R-30-L;const wallX=L+W*S.d/span;const WX=d=>L+W*d/span;
     // ground + ruler
     x.strokeStyle='rgba(242,239,233,.15)';x.lineWidth=1;x.beginPath();x.moveTo(L-30,gy);x.lineTo(R,gy);x.stroke();
     x.fillStyle=C.ink3;x.font=font(PRESENTER?15:12);x.textAlign='center';
-    for(let k=0;k<=5;k++){const X=WX(span*k/5),dm=span*k/5;x.fillRect(X,gy,1,6);x.fillText((dm<10&&dm%1?dm.toFixed(1):Math.round(dm))+' m · '+Math.round(dm*3.28084)+' ft',X,gy+20)}
+    {const nk=NARROW?2:5;for(let k=0;k<=nk;k++){const X=WX(span*k/nk),dm=span*k/nk;x.fillRect(X,gy,1,6);x.textAlign=k===0?'left':k===nk?'right':'center';x.fillText((dm<10&&dm%1?dm.toFixed(1):Math.round(dm))+' m · '+Math.round(dm*3.28084)+' ft',X,gy+20)}x.textAlign='center'}
     // echo line: the wall distance where this sound's reflection stops fusing
     {const dS=THR[S.src]/1000*CS/2,dE=ECH[S.src]/1000*CS/2;x.font=font(PRESENTER?15:12);x.textAlign='center';x.setLineDash([4,4]);
-      if(dS<=span){const X=WX(dS);x.strokeStyle='rgba(79,216,235,.6)';x.beginPath();x.moveTo(X,gy-sceneH*.62);x.lineTo(X,gy);x.stroke();x.fillStyle=C.cyan;x.fillText('slap-back from '+Math.round(dS*3.28)+' ft ('+dS.toFixed(1)+' m)',X,gy-sceneH*.62-8)}
-      if(dE<=span){const X=WX(dE);x.strokeStyle='rgba(255,210,74,.6)';x.beginPath();x.moveTo(X,gy-sceneH*.62);x.lineTo(X,gy);x.stroke();x.fillStyle=C.gold;x.fillText('echo from '+Math.round(dE*3.28)+' ft ('+dE.toFixed(1)+' m)',X,gy-sceneH*.62-(dS<=span&&Math.abs(WX(dE)-WX(dS))<170?24:8))}
+      x.font=font(NARROW?10:(PRESENTER?15:12));const lab1=NARROW?'slap-back '+Math.round(dS*3.28)+' ft':'slap-back from '+Math.round(dS*3.28)+' ft ('+dS.toFixed(1)+' m)',lab2=NARROW?'echo '+Math.round(dE*3.28)+' ft':'echo from '+Math.round(dE*3.28)+' ft ('+dE.toFixed(1)+' m)';
+      if(dS<=span){const X=WX(dS);x.strokeStyle='rgba(79,216,235,.6)';x.beginPath();x.moveTo(X,gy-sceneH*.62);x.lineTo(X,gy);x.stroke();x.fillStyle=C.cyan;x.textAlign=X<70?'left':'center';x.fillText(lab1,X,gy-sceneH*.62-8)}
+      if(dE<=span){const X=WX(dE);x.strokeStyle='rgba(255,210,74,.6)';x.beginPath();x.moveTo(X,gy-sceneH*.62);x.lineTo(X,gy);x.stroke();x.fillStyle=C.gold;x.textAlign=X<70?'left':'center';x.fillText(lab2,X,gy-sceneH*.62-(dS<=span&&Math.abs(WX(dE)-WX(dS))<(NARROW?120:170)?24:8))}x.textAlign='center';
       x.setLineDash([])}
-    x.fillStyle=C.ink3;x.font=font(PRESENTER?14:11);x.textAlign='right';x.fillText(S.timing==='real'?'real timing · sound and animation at true speed':'animation slowed ×'+Math.round(slow())+' · sound follows it',R,14);
+    if(!NARROW){x.fillStyle=C.ink3;x.font=font(PRESENTER?14:11);x.textAlign='right';x.fillText(S.timing==='real'?'real timing · sound and animation at true speed':'animation slowed ×'+Math.round(slow())+' · sound follows it',R,14)}
     // wall
     const g=x.createLinearGradient(wallX,0,wallX+18,0);g.addColorStop(0,'#2C3649');g.addColorStop(1,'#151A25');x.fillStyle=g;x.fillRect(wallX,gy-sceneH*.62,18,sceneH*.62);
     x.fillStyle=C.ink2;x.fillText('WALL',wallX+9,gy-sceneH*.62-8);
@@ -2213,14 +2226,14 @@ const Echo9=(function(){
     // ---------- timeline: what arrives, and how you hear it ----------
     const tl=L-20,tr=R,tw=tr-tl,ty=sceneH+34,tb=h-86,tmax=Math.max(160,Math.min(1000,total*1.3+40));
     const TX=t=>tl+tw*Math.min(t,tmax)/tmax;const thr=THR[S.src];
-    x.fillStyle=C.ink3;x.font=font(PRESENTER?14:11);x.textAlign='left';x.fillText('WHAT ARRIVES AT YOUR EARS · milliseconds after the clap',tl,ty-6);
+    x.fillStyle=C.ink3;x.font=font(PRESENTER?14:11);x.textAlign='left';x.fillText(NARROW?'ARRIVALS · ms after the clap':'WHAT ARRIVES AT YOUR EARS · milliseconds after the clap',tl,ty-6);
     // three zones: fused · slap-back · echo
     const ech=ECH[S.src];x.fillStyle='rgba(79,216,235,.10)';x.fillRect(TX(0),ty,TX(thr)-TX(0),tb-ty);x.fillStyle='rgba(255,210,74,.07)';x.fillRect(TX(thr),ty,TX(ech)-TX(thr),tb-ty);
     x.setLineDash([3,4]);x.strokeStyle='rgba(79,216,235,.5)';x.beginPath();x.moveTo(TX(thr),ty);x.lineTo(TX(thr),tb);x.stroke();x.strokeStyle='rgba(255,210,74,.5)';x.beginPath();x.moveTo(TX(ech),ty);x.lineTo(TX(ech),tb);x.stroke();x.setLineDash([]);
     x.textAlign='center';x.fillStyle=C.cyan;if(TX(thr)-TX(0)>110)x.fillText('FUSED · one event',(TX(0)+TX(thr))/2,ty+14);else if(TX(thr)-TX(0)>44)x.fillText('FUSED',(TX(0)+TX(thr))/2,ty+14);x.fillStyle=C.gold;if(TX(ech)-TX(thr)>130)x.fillText('SLAP-BACK · smeared',(TX(thr)+TX(ech))/2,ty+14);else if(TX(ech)-TX(thr)>70)x.fillText('SLAP-BACK',(TX(thr)+TX(ech))/2,ty+14);x.fillStyle=C.ink2;if(tr-TX(ech)>60)x.fillText('ECHO · two events',(TX(ech)+tr)/2,ty+14);
     x.fillStyle=C.cyan;x.fillText(thr+' ms',TX(thr),tb+14);x.fillStyle=C.gold;x.fillText(ech+' ms',TX(ech),tb+14);
     x.strokeStyle='rgba(242,239,233,.15)';x.beginPath();x.moveTo(tl,tb);x.lineTo(tr,tb);x.stroke();
-    const step=tmax>500?100:tmax>250?50:20;x.fillStyle=C.ink3;for(let t=0;t<=tmax;t+=step){x.fillRect(TX(t),tb,1,4);if(Math.abs(TX(t)-TX(thr))>30&&Math.abs(TX(t)-TX(ech))>30)x.fillText(t+'',TX(t),tb+14)}
+    const step=tmax>500?100:tmax>250?50:20;x.fillStyle=C.ink3;for(let t=0;t<=tmax;t+=step){x.fillRect(TX(t),tb,1,4);if(t>0&&Math.abs(TX(t)-TX(thr))>30&&Math.abs(TX(t)-TX(ech))>30)x.fillText(t+'',TX(t),tb+14)}
     // spikes (dim until arrived in the animation)
     const arrivedD=tv<0||tv>=0,arrivedR=tv<0||tv>=total;
     x.fillStyle=C.cyan;x.globalAlpha=arrivedD?1:.25;x.fillRect(TX(0)-1.5,ty+20,4,tb-ty-20);
@@ -2428,7 +2441,7 @@ const Pair6c=(function(){
     dirty=false}
   let off=null;
   function draw(){
-    x=fit(cv);const w=cv._w,h=cv._h;x.clearRect(0,0,w,h);const L=50,R=w-30,top=30,bot=h-36,cw=R-L,ch=bot-top;
+    x=fit(cv);const w=cv._w,h=cv._h;x.clearRect(0,0,w,h);const NARROW=w<600;const L=NARROW?16:50,R=w-(NARROW?16:30),top=30,bot=h-36,cw=R-L,ch=bot-top;
     const X=px=>L+(px/ROOM.w+.5)*cw,Y=py=>top+py/ROOM.d*ch;
     if(dirty||!img)buildMap(cw,ch);
     if(!off){off=document.createElement('canvas')}off.width=imgW;off.height=imgH;off.getContext('2d').putImageData(img,0,0);
@@ -2446,15 +2459,15 @@ const Pair6c=(function(){
     x.strokeStyle='rgba(242,239,233,.3)';x.lineWidth=1.5;x.beginPath();x.moveTo(L,Y(0)+1);x.lineTo(R,Y(0)+1);x.stroke();
     if(S.onL&&S.onR){x.strokeStyle='rgba(255,210,74,.5)';x.setLineDash([4,6]);x.beginPath();x.moveTo(X(0),Y(0));x.lineTo(X(0),Y(ROOM.d));x.stroke();x.setLineDash([]);
       x.fillStyle=C.gold;x.font=font(12);x.textAlign='center';x.fillText('POWER ALLEY · both paths equal',X(0),Y(ROOM.d)-10)}
-    x.fillStyle=C.ink3;x.font=font(12);x.textAlign='left';x.fillText('STAGE',L+6,Y(0)-8);x.textAlign='right';x.fillText('bright seat = loud · dark seat = quiet or cancelled',R-6,Y(0)-8);
+    x.fillStyle=C.ink3;x.font=font(12);x.textAlign='left';x.fillText('STAGE',L+6,Y(0)-8);if(!NARROW){x.textAlign='right';x.fillText('bright seat = loud · dark seat = quiet or cancelled',R-6,Y(0)-8)}
     // wavelength scale bar
     const lam=lambda(),bx=L+10,by=Y(2.2);x.strokeStyle=C.ink;x.lineWidth=2;x.beginPath();x.moveTo(bx,by);x.lineTo(bx+lam*cw/ROOM.w,by);x.stroke();
-    x.fillStyle=C.ink;x.textAlign='left';x.fillText('one wavelength at '+S.f+' Hz = '+(lam*3.28).toFixed(1)+' ft ('+lam.toFixed(2)+' m)',bx,by-6);
+    x.fillStyle=C.ink;x.textAlign='left';x.font=font(NARROW?10:12);x.fillText(NARROW?('λ = '+(lam*3.28).toFixed(1)+' ft'):('one wavelength at '+S.f+' Hz = '+(lam*3.28).toFixed(1)+' ft ('+lam.toFixed(2)+' m)'),bx,by-6);x.font=font(12);
     // ruler
-    x.fillStyle=C.ink3;x.textAlign='center';for(const m of [-10,-5,0,5,10]){x.fillRect(X(m),bot,1,4);x.fillText(Math.abs(m)+' m · '+Math.round(Math.abs(m)*3.28)+' ft',X(m),bot+16)}
+    x.fillStyle=C.ink3;x.textAlign='center';for(const m of (NARROW?[-10,0,10]:[-10,-5,0,5,10])){x.fillRect(X(m),bot,1,4);x.fillText(Math.abs(m)+' m · '+Math.round(Math.abs(m)*3.28)+' ft',X(m),bot+16)}
     // speakers
     spk().forEach(([sx,sy],i)=>{const on=i?S.onR:S.onL;const px=X(sx),py=Y(sy);if(on){x.save();x.globalCompositeOperation='lighter';x.drawImage(SPR.cyan,px-22,py-22,44,44);x.restore()}
-      x.fillStyle=on?'#2C3649':'#1A2130';x.fillRect(px-9,py-14,18,20);x.fillStyle=on?C.cyan:C.ink3;x.beginPath();x.arc(px,py-4,5,0,7);x.fill();x.fillStyle=C.ink2;x.font=font(12);x.textAlign='center';if(S.sp<.5){if(i)x.fillText('BOTH SPEAKERS TOGETHER'+(S.onL&&S.onR?'':' · one muted'),px,py+18)}else x.fillText((i?'HOUSE RIGHT':'HOUSE LEFT')+(on?'':' · MUTED'),px,py+18)});
+      x.fillStyle=on?'#2C3649':'#1A2130';x.fillRect(px-9,py-14,18,20);x.fillStyle=on?C.cyan:C.ink3;x.beginPath();x.arc(px,py-4,5,0,7);x.fill();x.fillStyle=C.ink2;x.font=font(NARROW?10:12);x.textAlign='center';if(S.sp<.5){if(i)x.fillText('BOTH TOGETHER'+(S.onL&&S.onR?'':' · one muted'),px,py+18)}else x.fillText((NARROW?(i?'HOUSE R':'HOUSE L'):(i?'HOUSE RIGHT':'HOUSE LEFT'))+(on?'':' · MUTED'),px,py+18)});
     // listener
     const lx=X(S.ls.x),ly=Y(S.ls.y);const [a,b]=spk();
     x.strokeStyle='rgba(79,216,235,.45)';x.lineWidth=1;x.setLineDash([3,4]);x.beginPath();if(S.onL){x.moveTo(X(a[0]),Y(a[1]));x.lineTo(lx,ly)}if(S.onR){x.moveTo(X(b[0]),Y(b[1]));x.lineTo(lx,ly)}x.stroke();x.setLineDash([]);
@@ -2477,7 +2490,7 @@ const Pair6c=(function(){
     const rx=fit(rcv);const w=rcv._w,h=rcv._h;rx.clearRect(0,0,w,h);const L=48,R=w-30,W=R-L,top=26,bot=h-26;
     const [a,b]=spk();const r1=Math.hypot(S.ls.x-a[0],S.ls.y-a[1]),r2=Math.hypot(S.ls.x-b[0],S.ls.y-b[1]);const g1=S.onL?gainAt(r1):0,g2=S.onR?gainAt(r2):0;
     const Y=db=>top+clamp((110-db)/50,0,1)*(bot-top);   // 110 … 60 dB SPL
-    rx.fillStyle=C.ink3;rx.font=font(12);rx.textAlign='left';rx.fillText('FREQUENCY RESPONSE AT THE LISTENER · dB SPL · what a measurement mic would read here',L,16);
+    rx.fillStyle=C.ink3;rx.font=font(w<600?10:12);rx.textAlign='left';rx.fillText(w<600?'RESPONSE AT THE LISTENER · dB SPL':'FREQUENCY RESPONSE AT THE LISTENER · dB SPL · what a measurement mic would read here',L,16);rx.font=font(12);
     for(const d of [110,100,90,80,70,60]){rx.strokeStyle='rgba(242,239,233,'+(d===90?.16:.07)+')';rx.lineWidth=1;rx.beginPath();rx.moveTo(L,Y(d));rx.lineTo(R,Y(d));rx.stroke();rx.fillStyle=C.ink3;rx.textAlign='right';rx.fillText(d,L-4,Y(d)+4)}
     rx.textAlign='center';for(const f of [31.5,63,125,250,500,1000,2000,4000,8000,16000]){const X=L+W*Math.log10(f/20)/3;rx.fillRect(X,bot,1,4);rx.fillText(f>=1000?(f/1000)+'k':f,X,bot+16)}
     // reference: one box at 10 ft (faint)
@@ -2486,7 +2499,7 @@ const Pair6c=(function(){
     for(let i=0;i<=W;i++){const f=20*Math.pow(1000,i/W);const db=(g1||g2)?boxDb(f)+interfDb(f,r1,r2,g1,g2):55;const y=Y(db);i?rx.lineTo(L+i,y):rx.moveTo(L+i,y)}rx.stroke();
     const X=L+W*Math.log10(S.f/20)/3;rx.strokeStyle='rgba(242,239,233,.5)';rx.setLineDash([3,4]);rx.beginPath();rx.moveTo(X,top);rx.lineTo(X,bot);rx.stroke();rx.setLineDash([]);
     rx.fillStyle=C.ink;rx.textAlign=X>R-120?'right':'left';rx.fillText(S.f+' Hz (slider)',X+(X>R-120?-6:6),top+12);
-    rx.fillStyle=C.ink2;rx.textAlign='right';rx.fillText(g1&&g2?(S.sp<.05?'speakers together: one source, no ripple':'peaks and dips = comb filtering · they move as you drag'):(g1||g2?'one speaker: its own response, scaled by distance':'muted')+' · dotted = one box at 10 ft',R,bot-8);
+    rx.fillStyle=C.ink2;rx.textAlign='right';rx.font=font(w<600?10:12);rx.fillText(g1&&g2?(S.sp<.05?'speakers together: one source, no ripple':'peaks and dips = comb filtering · they move as you drag'):(g1||g2?'one speaker: its own response, scaled by distance':'muted')+' · dotted = one box at 10 ft',R,bot-8);
   }
   function ro(){drawResp();const [lin,r1,r2,v]=level(S.ls.x,S.ls.y);const wl=lambda(),dd=Math.abs(r1-r2),frac=(dd/wl)%1,deg=Math.round(frac*360);
     const spl=splAt(S.f,S.ls.x,S.ls.y),both=S.onL&&S.onR,one=S.onL||S.onR;
@@ -2535,14 +2548,16 @@ const Spl4=(function(){
       x.textAlign='left';x.fillStyle=Math.abs(d-val)<5?C.ink:C.ink3;x.font=Math.abs(d-val)<5?font(14):font(12);x.fillText(l,L+60,y+4);x.font=font(12)}
     // marker
     const y=Y(shown);x.fillStyle=C.gold;x.beginPath();x.moveTo(L+30,y);x.lineTo(L+42,y-6);x.lineTo(L+42,y+6);x.closePath();x.fill();
+    const NARROW=w<560;
     // big unit label on the chart itself
-    x.fillStyle=C.ink;x.font=font(44);x.textAlign='right';x.fillText('dB SPL',w-190,bot-30);
-    x.fillStyle=C.cyan;x.font=font(14);x.fillText('decibels · Sound Pressure Level',w-190,bot-10);
+    if(NARROW){x.fillStyle=C.ink;x.font=font(30);x.textAlign='right';x.fillText('dB SPL',w-12,top+H*.5);x.fillStyle=C.cyan;x.font=font(11);x.fillText('decibels · Sound Pressure Level',w-12,top+H*.5+16)}
+    else{x.fillStyle=C.ink;x.font=font(44);x.textAlign='right';x.fillText('dB SPL',w-190,bot-30);
+    x.fillStyle=C.cyan;x.font=font(14);x.fillText('decibels · Sound Pressure Level',w-190,bot-10);}
     // ---- bottom strip: the same loudness as particle swing, and as amplitude on paper ----
     {const sy=h-stripH+6,sh=stripH-10;x.strokeStyle='rgba(242,239,233,.15)';x.beginPath();x.moveTo(20,sy-4);x.lineTo(w-20,sy-4);x.stroke();
       const amp=Math.pow(shown/130,1.6);   // loudness → visual swing (compressed so 130 dB still fits)
       const half=w/2-30,L1=30,L2=w/2+10,cy=sy+sh*.58;
-      x.fillStyle=C.ink3;x.font=font(12);x.textAlign='left';x.fillText('IN THE AIR · particles swing further',L1,sy+12);x.fillText('ON PAPER · amplitude',L2,sy+12);x.fillStyle=C.ink2;x.textAlign='right';x.fillText('same sound · in the air we measure it as '+Math.round(shown)+' dB SPL',w-20,sy+sh+2);
+      x.fillStyle=C.ink3;x.font=font(NARROW?10:12);x.textAlign='left';x.fillText(NARROW?'IN THE AIR':'IN THE AIR · particles swing further',L1,sy+12);x.fillText(NARROW?'ON PAPER':'ON PAPER · amplitude',L2,sy+12);x.fillStyle=C.ink2;x.textAlign='right';x.font=font(NARROW?10:12);x.fillText((NARROW?'in the air: ':'same sound · in the air we measure it as ')+Math.round(shown)+' dB SPL',w-20,sy+sh+2);
       const n=40,sp=half/n,A=sp*2.6*amp;x.save();x.globalCompositeOperation='lighter';
       for(let r=0;r<2;r++)for(let i=0;i<n;i++){const u=(i+.5)/n,arg=2*Math.PI*2*u-t*2.5;const d=A*Math.cos(arg),pr=-Math.sin(arg)*amp;const X=L1+u*half+d,Yp=cy+(r-.5)*sh*.3;
         x.globalAlpha=.55;x.drawImage(SPR.neutral,X-4,Yp-4,8,8);if(Math.abs(pr)>.05){x.globalAlpha=Math.min(1,Math.abs(pr)*1.4);x.drawImage(pr>0?SPR.coral:SPR.violet,X-4,Yp-4,8,8)}}
@@ -2550,10 +2565,10 @@ const Spl4=(function(){
       x.strokeStyle='rgba(242,239,233,.15)';x.beginPath();x.moveTo(L2,cy);x.lineTo(L2+half,cy);x.stroke();
       x.strokeStyle=C.cyan;x.lineWidth=2;x.beginPath();for(let i=0;i<=half;i+=2){const yy=cy-Math.sin(2*Math.PI*2*i/half-t*2.5)*sh*.36*amp;i?x.lineTo(L2+i,yy):x.moveTo(L2+i,yy)}x.stroke();x.lineWidth=1;
       x.strokeStyle='rgba(255,210,74,.6)';x.setLineDash([3,4]);x.beginPath();x.moveTo(L2+half*.75,cy);x.lineTo(L2+half*.75,cy-sh*.36*amp);x.stroke();x.setLineDash([]);x.fillStyle=C.gold;x.font=font(11);x.textAlign='left';x.fillText('amplitude',L2+half*.75+4,cy-sh*.18*amp)}
-    // pressure-ratio bar: log ruler along the right
-    const bx=w-170,bw=110;x.fillStyle=C.ink3;x.font=font(12);x.textAlign='left';x.fillText('PRESSURE vs 0 dB',bx,top+2);x.fillStyle=C.ink2;x.fillText('+20 dB = ×10 · +6 dB = ×2',bx,top+16);
+    // pressure-ratio bar: log ruler along the right (desktop only)
+    if(!NARROW){const bx=w-170,bw=110;x.fillStyle=C.ink3;x.font=font(12);x.textAlign='left';x.fillText('PRESSURE vs 0 dB',bx,top+2);x.fillStyle=C.ink2;x.fillText('+20 dB = ×10 · +6 dB = ×2',bx,top+16);
     for(let k=0;k<=6;k++){const yy=top+30+(H-30)*(1-k/6.5);x.fillStyle='rgba(242,239,233,.15)';x.fillRect(bx,yy,bw,1);x.fillStyle=C.ink3;x.textAlign='right';x.fillText('×'+(k?'1'+'0'.repeat(k):'1'),bx+bw+52,yy+4)}
-    const pk=shown/20;const yy=top+30+(H-30)*(1-pk/6.5);x.fillStyle=C.gold;x.fillRect(bx,yy-2,bw,4);
+    const pk=shown/20;const yy=top+30+(H-30)*(1-pk/6.5);x.fillStyle=C.gold;x.fillRect(bx,yy-2,bw,4)}
   }
   function ro(){$('#spl-ro').innerHTML=val+'<small>dB SPL</small>';$('#spl-sub').textContent=nameOf(val);$('#spl-val').textContent=val+' dB';
     const r=Math.pow(10,val/20);$('#spl-x').textContent=(r>=1000?Math.round(r).toLocaleString():r.toFixed(r<10?1:0))+'×';
