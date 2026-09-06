@@ -874,6 +874,7 @@ html.reduce-motion *{transition-duration:0ms !important}
   <div class="box">
     <h2 id="am-h" style="font-family:var(--title);font-size:28px">Before we make sound</h2>
     <p>Turn your volume <strong>down</strong> first, especially with headphones. The tones are kept quiet, but start low and bring it up.</p>
+    <p class="caption" style="margin:8px 0 0">On an iPhone or iPad: if you hear nothing, check the ring/silent switch on the side — sound effects like these follow it.</p>
     <div class="row"><button class="btn on" id="am-ok">Enable sound</button><button class="btn" id="am-no">Not now</button></div>
   </div>
 </div>
@@ -1546,14 +1547,21 @@ function pcmOneShot(ctx,spec){const raw=atob(spec.data),n=raw.length/2,buf=ctx.c
 const Audio=(function(){
   let ctx=null,master=null,analyser=null,ready=false,pending=null,on=false;const live={};let freqData=null;
   const volGain=v=>.5*Math.pow(v/100,1.5);   // 60 → ≈0.23; safe cap 0.5 at full
+  // iOS: play a silent <audio> element on the same gesture. This moves the page into the "media playback" audio category,
+  // so Web Audio is heard even with the ring/silent switch on (the well-known "unmute" trick).
+  let silent=null;
+  function iosUnmute(){try{if(!silent){silent=document.createElement('audio');silent.setAttribute('playsinline','');silent.setAttribute('x-webkit-airplay','deny');silent.preload='auto';silent.loop=true;
+      silent.src='data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAAA=';}
+    const p=silent.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}}
   function unlock(){
-    if(ready){if(ctx.state==='suspended')ctx.resume();return}
+    iosUnmute();
+    if(ready){if(ctx.state!=='running')ctx.resume();return}
     const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
     ctx=new AC();master=ctx.createGain();master.gain.value=volGain(+$('#vol').value);analyser=ctx.createAnalyser();analyser.fftSize=4096;analyser.smoothingTimeConstant=.8;master.connect(analyser);analyser.connect(ctx.destination);freqData=new Float32Array(analyser.frequencyBinCount);ready=true;
   }
   function setOn(v){on=v;$('#audio-btn').setAttribute('aria-pressed',String(v));if(!v)stopAll();else if(typeof SndOwners!=='undefined'&&SndOwners[current])SndOwners[current]()}
   function ensure(cb){ // make sure audio is unlocked AND on, then run cb
-    if(ready){if(ctx.state==='suspended')ctx.resume();if(!on)setOn(true);cb();return}
+    if(ready){iosUnmute();if(ctx.state!=='running')ctx.resume();if(!on)setOn(true);cb();return}
     pending=cb;$('#audio-modal').classList.add('open');$('#am-ok').focus();
   }
   $('#am-ok').onclick=()=>{unlock();$('#audio-modal').classList.remove('open');if(ready){setOn(true);if(pending){const cb=pending;pending=null;cb()}}};
@@ -1583,6 +1591,9 @@ const Audio=(function(){
   }
   function stopAll(){for(const k in live)live[k].stop();if(typeof Owned!=='undefined')Owned.forEach(h=>h.stop&&h.stop())}
   document.addEventListener('visibilitychange',()=>{if(document.hidden)stopAll();else if(on&&typeof SndOwners!=='undefined'&&SndOwners[current])SndOwners[current]()});
+  // iOS suspends/interrupts the context after app switches or calls: resume on the next touch anywhere
+  const kick=()=>{if(ready&&ctx.state!=='running'){ctx.resume();iosUnmute();if(on&&typeof SndOwners!=='undefined'&&SndOwners[current])SndOwners[current]()}};
+  document.addEventListener('touchend',kick,{passive:true});document.addEventListener('pointerup',kick,{passive:true});
   // spectrum of what is actually playing: returns dB for a log-spaced set of frequencies
   function spectrum(freqs,out){if(!ready){out.fill(-200);return out}analyser.getFloatFrequencyData(freqData);const bw=ctx.sampleRate/analyser.fftSize;
     for(let i=0;i<freqs.length;i++){const f0=i?Math.sqrt(freqs[i-1]*freqs[i]):freqs[i]/1.05,f1=i<freqs.length-1?Math.sqrt(freqs[i]*freqs[i+1]):freqs[i]*1.05;let b0=Math.floor(f0/bw),b1=Math.max(b0,Math.floor(f1/bw));let m=-200;for(let b=b0;b<=b1&&b<freqData.length;b++)if(freqData[b]>m)m=freqData[b];out[i]=m}return out}
