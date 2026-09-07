@@ -1554,18 +1554,20 @@ const Audio=(function(){
   function iosUnmute(){try{if(!silent){silent=document.createElement('audio');silent.setAttribute('playsinline','');silent.setAttribute('x-webkit-airplay','deny');silent.preload='auto';silent.loop=true;silent.volume=0.01;
       silent.src='data:audio/wav;base64,UklGRmQGAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YUAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';}
     const p=silent.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}}
+  // a short, quiet tone started directly on the output — the thing iOS actually needs inside a user gesture
+  function blip(){try{const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=660;g.gain.value=.02;o.connect(g);g.connect(ctx.destination);o.start();o.stop(ctx.currentTime+.06)}catch(e){}}
   function unlock(){
     iosUnmute();
     if(ready){if(ctx.state!=='running')ctx.resume();return}
     const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
     ctx=new AC();master=ctx.createGain();master.gain.value=volGain(+$('#vol').value);
-    // classic iOS unlock: start an (almost) empty buffer inside the user gesture, and resume explicitly
-    try{const ub=ctx.createBuffer(1,1,ctx.sampleRate),us=ctx.createBufferSource();us.buffer=ub;us.connect(ctx.destination);us.start(0)}catch(e){}
-    if(ctx.state!=='running')ctx.resume();analyser=ctx.createAnalyser();analyser.fftSize=4096;analyser.smoothingTimeConstant=.8;master.connect(analyser);analyser.connect(ctx.destination);freqData=new Float32Array(analyser.frequencyBinCount);ready=true;
+    if(ctx.state!=='running')ctx.resume();
+    blip();   /* iOS wakes the engine only when a real source is started inside the tap */
+    analyser=ctx.createAnalyser();analyser.fftSize=4096;analyser.smoothingTimeConstant=.8;master.connect(analyser);analyser.connect(ctx.destination);freqData=new Float32Array(analyser.frequencyBinCount);ready=true;
   }
   function setOn(v){on=v;$('#audio-btn').setAttribute('aria-pressed',String(v));if(!v)stopAll();else if(typeof SndOwners!=='undefined'&&SndOwners[current])SndOwners[current]()}
   function ensure(cb){ // make sure audio is unlocked AND on, then run cb
-    if(ready){iosUnmute();if(ctx.state!=='running')ctx.resume();if(!on)setOn(true);cb();return}
+    if(ready){iosUnmute();if(ctx.state!=='running'){ctx.resume();blip()}if(!on)setOn(true);cb();return}
     pending=cb;$('#audio-modal').classList.add('open');$('#am-ok').focus();
   }
   function status(){const el=$('#am-status');if(!el)return;if(!ready){el.textContent='audio engine: not started';return}el.textContent='audio engine: '+ctx.state+' · '+ctx.sampleRate+' Hz'+(on?' · on':' · off')}
@@ -1573,7 +1575,7 @@ const Audio=(function(){
   $('#am-ok').onclick=()=>{unlock();if(ready){setOn(true);if(pending){const cb=pending;pending=null;cb()}}status();setTimeout(()=>{$('#audio-modal').classList.remove('open')},ready&&ctx.state==='running'?150:1200)};
   $('#am-test').onclick=()=>{unlock();if(!ready)return;if(ctx.state!=='running')ctx.resume();const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=660;g.gain.value=.25;o.connect(g);g.connect(ctx.destination);o.start();o.stop(ctx.currentTime+.3);status()};
   $('#am-no').onclick=()=>{pending=null;$('#audio-modal').classList.remove('open')};
-  $('#audio-btn').onclick=()=>{if(!ready){ensure(()=>{});return}setOn(!on);if(window.innerWidth<=860){$('#vol-mobile').classList.toggle('open',on)}};
+  $('#audio-btn').onclick=()=>{if(!ready){ensure(()=>{});return}if(!on){if(ctx.state!=='running')ctx.resume();blip()}setOn(!on);if(window.innerWidth<=860){$('#vol-mobile').classList.toggle('open',on)}};
   // phone volume popover mirrors the header slider
   $('#vol2').oninput=e=>{$('#vol').value=e.target.value;$('#vol').dispatchEvent(new Event('input'))};
   document.addEventListener('pointerdown',e=>{const vm=$('#vol-mobile');if(vm.classList.contains('open')&&!vm.contains(e.target)&&!$('#audio-btn').contains(e.target))vm.classList.remove('open')});
@@ -1599,7 +1601,7 @@ const Audio=(function(){
   function stopAll(){for(const k in live)live[k].stop();if(typeof Owned!=='undefined')Owned.forEach(h=>h.stop&&h.stop())}
   document.addEventListener('visibilitychange',()=>{if(document.hidden)stopAll();else if(on&&typeof SndOwners!=='undefined'&&SndOwners[current])SndOwners[current]()});
   // iOS suspends/interrupts the context after app switches or calls: resume on the next touch anywhere
-  const kick=()=>{if(ready&&ctx.state!=='running'){ctx.resume();iosUnmute();if(on&&typeof SndOwners!=='undefined'&&SndOwners[current])SndOwners[current]()}};
+  const kick=()=>{if(ready&&ctx.state!=='running'){ctx.resume();iosUnmute();blip();if(on&&typeof SndOwners!=='undefined'&&SndOwners[current])SndOwners[current]()}};
   document.addEventListener('touchend',kick,{passive:true});document.addEventListener('pointerup',kick,{passive:true});
   // spectrum of what is actually playing: returns dB for a log-spaced set of frequencies
   function spectrum(freqs,out){if(!ready){out.fill(-200);return out}analyser.getFloatFrequencyData(freqData);const bw=ctx.sampleRate/analyser.fftSize;
