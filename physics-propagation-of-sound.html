@@ -375,12 +375,27 @@ html.reduce-motion *{transition-duration:0ms !important}
 <style>
 @media (max-width:860px){
   /* phone: let the whole document scroll normally instead of an inner scrolling pane */
-  html,body{height:auto;overflow:auto}
+  html,body{height:auto;overflow:visible}
   #app{display:block;height:auto;min-height:100vh}
   header{position:sticky;top:0;z-index:20;height:56px}
   main{overflow:visible;height:auto}
   .view{max-width:none}
   .lab-view.active{height:auto}
+}
+</style>
+
+<style>
+/* ---------- phone: pinned instrument. The graph stays under the header; controls scroll beneath it ---------- */
+@media (max-width:860px){
+  .lab-view .lab-main{position:sticky;top:56px;z-index:6;background:var(--bg);padding:6px 0 8px;margin:0 -12px;padding-left:12px;padding-right:12px;box-shadow:0 10px 18px -10px rgba(0,0,0,.8)}
+  .lab-view .stage canvas.fill,.stage canvas.field{height:min(36vh,320px)}
+  .lab-view .lab-main .stage:not(:only-child) canvas.fill{height:min(22vh,200px)}   /* two stacked graphs share the pinned area */
+  #view-s2 .stage canvas.field{height:min(32vh,300px)}
+  #view-s2 .graph canvas{height:84px}
+  .lab-view .lead{display:none}                                 /* headline only above the pinned graph; full text lives below the controls */
+  .lab-view h1{margin-bottom:2px}
+  .lab-view .lab-side{padding-top:6px}
+  #intro .icap{font-size:16px;bottom:10px}
 }
 </style>
 <body>
@@ -875,7 +890,7 @@ html.reduce-motion *{transition-duration:0ms !important}
     <h2 id="am-h" style="font-family:var(--title);font-size:28px">Before we make sound</h2>
     <p>Turn your volume <strong>down</strong> first, especially with headphones. The tones are kept quiet, but start low and bring it up.</p>
     <p class="caption" style="margin:8px 0 0">On an iPhone or iPad: if you hear nothing, check the ring/silent switch on the side — sound effects like these follow it.</p>
-    <div class="row"><button class="btn on" id="am-ok">Enable sound</button><button class="btn" id="am-test">Test beep</button><button class="btn" id="am-no">Not now</button></div>
+    <div class="row"><button class="btn on" id="am-ok">Enable sound</button><button class="btn" id="am-no">Not now</button></div>
     <p class="caption" id="am-status" style="margin:10px 0 0">audio engine: not started</p>
   </div>
 </div>
@@ -1573,7 +1588,6 @@ const Audio=(function(){
   function status(){const el=$('#am-status');if(!el)return;if(!ready){el.textContent='audio engine: not started';return}el.textContent='audio engine: '+ctx.state+' · '+ctx.sampleRate+' Hz'+(on?' · on':' · off')}
   setInterval(status,500);
   $('#am-ok').onclick=()=>{unlock();if(ready){setOn(true);if(pending){const cb=pending;pending=null;cb()}}status();setTimeout(()=>{$('#audio-modal').classList.remove('open')},ready&&ctx.state==='running'?150:1200)};
-  $('#am-test').onclick=()=>{unlock();if(!ready)return;if(ctx.state!=='running')ctx.resume();const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=660;g.gain.value=.25;o.connect(g);g.connect(ctx.destination);o.start();o.stop(ctx.currentTime+.3);status()};
   $('#am-no').onclick=()=>{pending=null;$('#audio-modal').classList.remove('open')};
   $('#audio-btn').onclick=()=>{if(!ready){ensure(()=>{});return}if(!on){if(ctx.state!=='running')ctx.resume();blip()}setOn(!on);if(window.innerWidth<=860){$('#vol-mobile').classList.toggle('open',on)}};
   // phone volume popover mirrors the header slider
